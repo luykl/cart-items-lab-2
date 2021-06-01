@@ -8,34 +8,35 @@ const Routes = express.Router();
 
 
 Routes.get("/", async (req, res) => {
-  try {
-    const client = await getClient();
-    let results = await client.db().collection<CartItem>('cartItems').find().toArray();
 
-
-    let maxPrice: number = parseInt(req.query.maxPrice as string);
-    let product: string = req.query.product as string;
-    let pageSize: number = parseInt(req.query.pageSize as string);
-  
-    if (maxPrice) {
-        results = results.filter(item => item.price <= maxPrice);
-    }
+    const product = String(req.query.product || "");
+    const maxPrice = parseInt(req.query.maxPrice as string);
+    const pageSize = parseInt(req.query.pageSize as string);
+    const query: any = {};
     if (product) {
-      product = product.toLowerCase();
-      results = results.filter(
-          item => item.product.toLowerCase() === product);
+        query.product = product;
     }
-    if (pageSize) {
-      results = results.slice(0, pageSize);
+    if (!isNaN(maxPrice)) {
+        query.price = { $lte: maxPrice };
     }
-    res.status(200);
-    res.json(results);  // send JSON results
-    
+    let limit:number;
+    if (!isNaN(pageSize)) {
+        limit = pageSize
+    } else {
+        limit = 10
+    }
+    try {
+        const client = await getClient();
+        const results = await client.db().collection<CartItem>('cartItems').find(query).limit(limit).toArray();
+        res.status(200);
+        res.json(results);  // send JSON results
+
   } catch (err) {
     console.error("FAIL", err);
     res.status(500).json({message: "Internal Server Error"});
   }
 });
+
 
 Routes.get("/:id", async (req, res) => {
     const id = req.params.id;

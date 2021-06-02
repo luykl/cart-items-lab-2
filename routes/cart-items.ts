@@ -12,24 +12,28 @@ Routes.get("/", async (req, res) => {
     const product = String(req.query.product || "");
     const maxPrice = parseInt(req.query.maxPrice as string);
     const pageSize = parseInt(req.query.pageSize as string);
+    const prefix = String(req.query.prefix || "");
     const query: any = {};
     if (product) {
         query.product = product;
+    } else if (prefix) {
+      query.product =  new RegExp(prefix)
     }
     if (!isNaN(maxPrice)) {
         query.price = { $lte: maxPrice };
     }
-    let limit:number;
-    if (!isNaN(pageSize)) {
-        limit = pageSize
-    } else {
-        limit = 10
-    }
+       
     try {
         const client = await getClient();
-        const results = await client.db().collection<CartItem>('cartItems').find(query).limit(limit).toArray();
+        if (!isNaN(pageSize)) {
+        const results = await client.db().collection<CartItem>('cartItems').find(query).limit(pageSize).toArray();
         res.status(200);
-        res.json(results);  // send JSON results
+        res.json(results);
+        } else {
+        const results = await client.db().collection<CartItem>('cartItems').find(query).toArray();
+        res.status(200);
+        res.json(results);
+        }
 
   } catch (err) {
     console.error("FAIL", err);
